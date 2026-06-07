@@ -20,7 +20,9 @@ export async function runCliMode(){
             console.log(chalk.yellow("Going back to main menu..."));
             return;
         }
-        if(mode === "agent"){}
+        if(mode === "agent"){
+            await runAgentMode();
+        }
         if(mode === "plan"){}
         if(mode === "ask"){}
 
