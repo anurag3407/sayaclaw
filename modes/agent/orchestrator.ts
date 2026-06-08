@@ -53,10 +53,14 @@ export async funciton runAgentMode () {
     const ok = await runApprovalFlow(tracker);
     if(!ok) return executor.clearStaging();
     
+    const {errors} = executor.applyApprovedFromTracker();
+    if(errors.length > 0) {
+        console.log(chalk.red("Error applying changes"));
+        for(const err of errors) console.log(chalk.red(err));
+    } else {
+        console.log(chalk.green("Changes applied successfully"));
+    }}
 
     
 }
-
-    
-        
 
