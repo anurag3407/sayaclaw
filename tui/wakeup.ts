@@ -1,5 +1,6 @@
 import { select, isCancel } from "@clack/prompts";
 import figlet from "figlet";
+import { runCliMode } from "../modes/cli";
 
 const BANNER_FONT = 'ANSI Shadow';
 
@@ -27,5 +28,9 @@ export async function runWakeup() {
     process.exit(0);
   }
   
-  console.log(`Selected: ${mode}`);
+  if (mode === 'cli') {
+    await runCliMode();
+  } else if (mode === 'telegram') {
+    console.log("Telegram mode not implemented yet.");
+  }
 }

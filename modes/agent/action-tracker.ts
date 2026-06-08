@@ -1,11 +1,4 @@
-import type ( ActionLog , ActionStatus } from './types';
 import { isMutationType, type ActionLog, type ActionStatus } from './types';
-
-
-
-import { isMutations}
-
-
 
 export class ActionTracker {
 
@@ -44,7 +37,7 @@ export class ActionTracker {
     }
 
     updateStatus( id : string , status : ActionStatus , userApproved ? : boolean    ): void {
-        const a = this.actions.find((x)=>x.id === id)l
+        const a = this.actions.find((x)=>x.id === id);
         if(!a) return;
 
         a.status = status;
@@ -53,5 +46,7 @@ export class ActionTracker {
         }
     }
 
+    private generateId(): string {
+        return Math.random().toString(36).substring(2, 15);
     }
-
+}

@@ -1,49 +1,54 @@
-import { text } from "@clack/prompts";
+import { text, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 import { renderTerminalMarkdown } from "../../tui/terminal-md";
+import { getAgentModel } from "../../ai/index";
+import { ToolLoopAgent, stepCountIs } from "ai";
+import { ActionTracker } from "./action-tracker";
+import { ToolExecutor } from "./tool-executor";
+import { createAgentTools } from "./agent-tools";
+import { runApprovalFlow } from "./approval";
+import { defaultAgentConfig } from "./types";
 
+export async function runAgentMode() {
+    console.log(chalk.bold('\n Agent Mode\n'));
 
-export async funciton runAgentMode () {
-    console.timeLog(chalk.bold('\n Agent Mode\n'));
-
-
-
-    const goal = await text ({
-        message : "What Would you like the agent to do ? ",
-        placeholder : "Concrete task for this codebase..",
+    const goal = await text({
+        message: "What Would you like the agent to do ? ",
+        placeholder: "Concrete task for this codebase..",
     });
 
     if(isCancel(goal) || !goal.trim()) return;
 
-    const config = defaultAgentConfig()
+    const config = defaultAgentConfig();
 
     const tracker = new ActionTracker();
 
-    const executor = new ToolExecutor(config, tracker);
+    const executor = new ToolExecutor(tracker, config);
 
     const tools = createAgentTools(executor);
 
-
-    const agent = nre ToolLoopAgent({
-        model:getAgentModel(),
-        stopwhen:stepcountIs(40),
-        instructions : [
-            'Workspace root : ${config.codebasePath}',
+    const agent = new ToolLoopAgent({
+        model: getAgentModel(),
+        stopWhen: stepCountIs(40),
+        instructions: [
+            `Workspace root : ${config.codebasePath}`,
             'All mutations are staged until approval. ',
         ].join("\n"),
         tools,
     });
 
     const result = await agent.generate({
-        prompt:goal.trim(),
-        onStepFinish:({toolCalls})=>{
+        prompt: goal.trim(),
+        onStepFinish: ({toolCalls}) => {
             for(const tc of toolCalls) {
-                const preview = json.stringify(tc.input).slice(0,160);
+                const preview = JSON.stringify(tc.input).slice(0,160);
                 console.log(
-                    chalk.green('>> ') 
-                    chalk.bold(string(tc.toolName   )),
-                    chalk.dim(preview + (preview.length >= 160 ? "...") )
-                )
+                    chalk.green('>> '),
+                    chalk.bold(String(tc.toolName)),
+                    chalk.dim(preview + (preview.length >= 160 ? "..." : ""))
+                );
+            }
+        }
     });
 
     if(result.text?.trim()) {
@@ -59,8 +64,5 @@ export async funciton runAgentMode () {
         for(const err of errors) console.log(chalk.red(err));
     } else {
         console.log(chalk.green("Changes applied successfully"));
-    }}
-
-    
+    }
 }
-

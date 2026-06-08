@@ -7,7 +7,8 @@
     "sayaclaw": "./index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/marked-terminal": "^6.1.1"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -23,6 +24,7 @@
     "diff": "^9.0.0",
     "figlet": "^1.11.0",
     "marked": "^18.0.5",
-    "marked-terminal": "^7.3.0"
+    "marked-terminal": "^7.3.0",
+    "telegraph": "^0.8.22"
   }
 }

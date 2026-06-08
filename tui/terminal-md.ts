@@ -6,7 +6,7 @@ let ready = false;
 function ensureMarked(): void{
     if(ready) return;
     const w = Math.max(40,Math.min(process.stdout.columns || 80, 120));
-    marked.use(markedTerminal({width:w , reflowText:true} , {}));
+    marked.use(markedTerminal({width:w , reflowText:true} , {}) as any);
     ready = true;
 }
 
