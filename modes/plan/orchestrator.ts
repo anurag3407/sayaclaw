@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { confirm, isCancel, text } from "@clack/prompts";
+import { confirm, isCancel, text, spinner } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs } from "ai";
 import { getAgentModel } from "../../ai/ai.config.ts";
 import { ActionTracker } from "../agent/action-tracker.ts";
@@ -56,9 +56,22 @@ export async function runPlanMode(): Promise<void> {
       tools
     });
 
-    const r = await agent.generate({prompt:stepPrompt(plan.goal , step)})
+    const s = spinner();
+    s.start(chalk.cyan(`Executing: ${step.title}...`));
 
-    if(r.text) return console.log(renderTerminalMarkdown(r.text))
+    const r = await agent.generate({
+      prompt:stepPrompt(plan.goal , step),
+      onStepFinish: ({toolCalls}) => {
+        for(const tc of toolCalls) {
+            const preview = JSON.stringify(tc.input).slice(0,60);
+            s.message(chalk.cyan(`Executing ${tc.toolName}... `) + chalk.dim(preview + (preview.length >= 60 ? "..." : "")));
+        }
+      }
+    });
+
+    s.stop(chalk.green(`✓ Completed: ${step.title}`));
+
+    if(r.text) console.log(renderTerminalMarkdown(r.text))
 
   }
 

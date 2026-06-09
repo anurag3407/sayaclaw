@@ -9,17 +9,17 @@ export async function runCliMode(){
 
     while(true){
         const mode = await select({
-            message: "Choose cli sub mode",
+            message: chalk.hex('#d147479d')("Choose your spirit mode"),
             options: [
-              { value : "agent", label : "Agent Mode" },
-              {value : "plan" , label : "Plan Mode" },
-              {value : "ask" , label : "Ask Mode" },
-              {value : "back" , label : "<- Back to main menu" }
+              { value : "agent", label : "Agent Mode (Summon)" },
+              {value : "plan" , label : "Plan Mode (Strategize)" },
+              {value : "ask" , label : "Ask Mode (Consult)" },
+              {value : "back" , label : "<- Retreat to shadows" }
             ]
         });
 
         if(isCancel(mode) || mode === "back"){
-            console.log(chalk.yellow("Going back to main menu..."));
+            console.log(chalk.hex('#4B0082')("Returning to the void..."));
             return;
         }
         if(mode === "agent"){

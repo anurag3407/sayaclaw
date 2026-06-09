@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { confirm, isCancel, text } from "@clack/prompts";
+import { confirm, isCancel, text, spinner } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import { getAgentModel } from "../../ai/ai.config.ts";
@@ -103,7 +103,13 @@ export async function runAskMode() {
     tools,
   });
 
+  const s = spinner();
+  s.start(chalk.cyan("Consulting the spirits..."));
+
   const result = await agent.generate({ prompt: question.trim() });
+  
+  s.stop(chalk.green("The spirits have spoken."));
+  
   const answer = result.text?.trim() || "(no answer)";
   console.log("\n" + renderTerminalMarkdown(answer) + "\n");
 

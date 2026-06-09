@@ -8,6 +8,7 @@ import {
 } from "ai";
 import { z } from "zod";
 import chalk from "chalk";
+import { spinner } from "@clack/prompts";
 import { getAgentModel } from "../../ai/ai.config.ts";
 import { ActionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
@@ -92,53 +93,74 @@ function readOnlyTools(executor: ToolExecutor) {
   };
 }
 
-const PLAN_INSTRUCTIONS = (codebase: string, hasWeb: boolean) =>
+const RESEARCH_INSTRUCTIONS = (codebase: string, hasWeb: boolean) =>
   [
-    "You are a Plan-Mode planner. You DO NOT modify files.",
+    "You are a Plan-Mode researcher. You DO NOT modify files.",
     `Workspace: ${codebase}`,
-    "Use read-only tools for codebase/skills research.",
+    "Use read-only tools to research the codebase and understand the task.",
     hasWeb
       ? "Web tools are available (web_search/web_crawl/fetch_url). Use only when needed."
       : "Web tools are unavailable (no FIRECRAWL_API_KEY).",
-    "Output must match the provided JSON schema.",
-    "Keep it short: 1–15 steps.",
+    "After researching, provide a detailed summary of your findings that will help create an execution plan.",
   ].join("\n");
+
+const PLAN_INSTRUCTIONS = [
+  "You are a Plan-Mode planner. Based on the research provided, create an execution plan.",
+  "Output must be valid JSON matching the provided schema.",
+  "Keep it short: 1–15 steps.",
+].join("\n");
 
 export async function generatePlan(goal: string) {
   const config = defaultAgentConfig();
   const tracker = new ActionTracker();
   const executor = new ToolExecutor(tracker, config);
 
-
   const hasWeb = !!process.env.FIRECRAWL_API_KEY;
-  const model = wrapLanguageModel({
-    model:getAgentModel(),
-    middleware:extractJsonMiddleware()
-  })
+  const baseModel = getAgentModel();
 
+  const tools = { ...readOnlyTools(executor), ...(hasWeb ? createWebTools(tracker) : {}) };
 
-  const tools = { ...readOnlyTools(executor) , ...(hasWeb ? createWebTools(tracker) : {}) };
+  const s = spinner();
 
-  console.log(chalk.cyan("\n🔍 Researching & drafting a plan…\n"));
+  // Phase 1: Research with tools (no structured output)
+  s.start(chalk.cyan("Researching the codebase…"));
+
+  const research = await generateText({
+    model: baseModel,
+    tools,
+    stopWhen: stepCountIs(20),
+    system: RESEARCH_INSTRUCTIONS(config.codebasePath, hasWeb),
+    prompt: `User goal: \n${goal}`,
+  });
+
+  const researchContext = research.text?.trim() || "";
+
+  // Phase 2: Generate structured plan (no tools)
+  s.message(chalk.cyan("Drafting the plan…"));
+
+  const planModel = wrapLanguageModel({
+    model: baseModel,
+    middleware: extractJsonMiddleware(),
+  });
 
   const result = await generateText({
-    model,
-    tools,
-    stopWhen:stepCountIs(20),
-    system:PLAN_INSTRUCTIONS(config.codebasePath , hasWeb),
-    prompt:`User goal: \n${goal}`,
-    output:Output.object({schema:planSchema})
+    model: planModel,
+    system: PLAN_INSTRUCTIONS,
+    prompt: `Research findings:\n${researchContext}\n\nUser goal: ${goal}`,
+    output: Output.object({ schema: planSchema }),
   });
+
+  s.stop(chalk.green("Plan drafted."));
 
   const validated = planSchema.parse(result.output);
 
-  const steps:PlanStep[] = validated.steps.map((s , i)=>({
-    id:`step-${i+1}`,
-    title:s.title,
-    description:s.description,
-    hints:s.hints,
-    complexity:s.complexity
+  const steps: PlanStep[] = validated.steps.map((s, i) => ({
+    id: `step-${i + 1}`,
+    title: s.title,
+    description: s.description,
+    hints: s.hints,
+    complexity: s.complexity,
   }));
 
-  return {goal , researchSummary:validated.researchSummary , steps}
+  return { goal, researchSummary: validated.researchSummary, steps };
 }

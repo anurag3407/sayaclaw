@@ -1,4 +1,4 @@
-import { text, isCancel } from "@clack/prompts";
+import { text, isCancel, spinner } from "@clack/prompts";
 import chalk from "chalk";
 import { renderTerminalMarkdown } from "../../tui/terminal-md";
 import { getAgentModel } from "../../ai/index";
@@ -37,19 +37,20 @@ export async function runAgentMode() {
         tools,
     });
 
+    const s = spinner();
+    s.start(chalk.cyan("Agent is awakening..."));
+
     const result = await agent.generate({
         prompt: goal.trim(),
         onStepFinish: ({toolCalls}) => {
             for(const tc of toolCalls) {
-                const preview = JSON.stringify(tc.input).slice(0,160);
-                console.log(
-                    chalk.green('>> '),
-                    chalk.bold(String(tc.toolName)),
-                    chalk.dim(preview + (preview.length >= 160 ? "..." : ""))
-                );
+                const preview = JSON.stringify(tc.input).slice(0,60);
+                s.message(chalk.cyan(`Executing ${tc.toolName}... `) + chalk.dim(preview + (preview.length >= 60 ? "..." : "")));
             }
         }
     });
+    
+    s.stop(chalk.green("Agent finished its task."));
 
     if(result.text?.trim()) {
         console.log(renderTerminalMarkdown(result.text));
